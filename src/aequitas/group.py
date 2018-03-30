@@ -1,5 +1,13 @@
+import logging
+
 import pandas as pd
 
+
+# Authors: Pedro Saleiro <saleiro@uchicago.edu>
+#          Rayid Ghani
+#          Benedict Kuester
+#
+# License: Copyright \xa9 2018. The University of Chicago. All Rights Reserved
 
 class Group(object):
     def __init__(self):
@@ -90,43 +98,51 @@ class Group(object):
                                                                           thres).sum(
             ).astype(float))
 
-        group_functions = {'TPR': tpr,
-                           'TNR': tnr,
-                           'FOmR': fomr,
-                           'FDR': fdr,
-                           'FPR': fpr,
-                           'FNR': fnr,
-                           'NPV': npv,
-                           'Precision': precision,
-                           'PP': predicted_pos_count,
-                           'PN': predicted_neg_count,
-                           'PPR': predicted_pos_ratio_k,
-                           'PPrev': predicted_pos_ratio_g,
-                           'FP': false_pos_count,
-                           'FN': false_neg_count,
-                           'TN': true_neg_count,
-                           'TP': true_pos_count}
+        group_functions = {'tpr': tpr,
+                           'tnr': tnr,
+                           'for': fomr,
+                           'fdr': fdr,
+                           'fpr': fpr,
+                           'fnr': fnr,
+                           'npv': npv,
+                           'precision': precision,
+                           'pp': predicted_pos_count,
+                           'pn': predicted_neg_count,
+                           'ppr': predicted_pos_ratio_k,
+                           'pprev': predicted_pos_ratio_g,
+                           'fp': false_pos_count,
+                           'fn': false_neg_count,
+                           'tn': true_neg_count,
+                           'tp': true_pos_count}
         return group_functions
 
-    def get_crosstabs(self, df, thresholds, model_id):
+    def get_crosstabs(self, df, thresholds=None, model_id=1):
         """
         Creates univariate groups and calculates group metrics.
 
         :param df: a dataframe containing the following required columns [entity_id, as_of_date,
         model_id, score, rank_abs, rank_pct, label_value
-        :param thresholds: a dictionary { 'rank_abs':[] , 'rank_pct':[] }
+        :param thresholds: a dictionary { 'rank_abs':[] , 'rank_pct':[], 'score':[] }
         :param model_id:
         :param push_to_db: if you want to save the results on a db table
         :param push_to_file: if you want to save the results on a csv file
         :return:
         """
-        groups_df = pd.DataFrame(columns=['model_id', 'as_of_date', 'threshold_parameter',
-                                           'group_variable', 'group_value', 'metric', 'value'])
-        prior_df = pd.DataFrame(columns=['model_id', 'as_of_date', 'group_variable', 'group_value',
-                                         'count', 'n'])
+        # if no thresholds are provided, we assume that rank_abs=number of 1s in the score column
+
+        if not thresholds:
+            df['score'] = df['score'].astype(float)
+            count_ones = df['score'].value_counts()[1.0]
+            if count_ones == 0:
+                logging.error('get_crosstabs: No threshold provided and there is no 1s in the score column.')
+                exit(1)
+            thresholds = {'rank_abs': [count_ones]}
+        print('model_id, thresholds', model_id, thresholds)
+        df = df.sort_values('score', ascending=False)
+        df['rank_abs'] = range(1, len(df) + 1)
+        df['rank_pct'] = df['rank_abs'] / len(df)
         dfs = []
         prior_dfs = []
-
         model_cols = ['model_id', 'as_of_date', 'entity_id', 'score', 'rank_abs', 'rank_pct',
                       'label_value']
         # within each model and as_of_date, discretize the floaty features
@@ -161,7 +177,7 @@ class Group(object):
                 'group_size': counts.values,
                 'total_entities': [len(df)] * len(counts)
             })
-            this_prior_df['Prev'] = this_prior_df['group_label_pos'] / this_prior_df['group_size']
+            this_prior_df['prev'] = this_prior_df['group_label_pos'] / this_prior_df['group_size']
             # for each model_id and as_of_date the priors_df has length group_variables * group_values
             prior_dfs.append(this_prior_df)
             # we calculate the bias for two different types of thresholds (percentage ranks and absolute ranks)
@@ -174,8 +190,8 @@ class Group(object):
                         feat_bias = col_group.apply(func)
                         metrics_df = pd.DataFrame({
                             'model_id': [model_id] * len(feat_bias),
-                            'parameter': str(thres_val) + '_' + thres_unit[-3:],
-                            'k': k,
+                            'parameter': [str(thres_val) + '_' + thres_unit[-3:]] * len(feat_bias),
+                            'k': [k] * len(feat_bias),
                             'group_variable': [col] * len(feat_bias),
                             'group_value': feat_bias.index.values,
                             name: feat_bias.values
