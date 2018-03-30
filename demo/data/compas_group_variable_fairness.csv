@@ -1,0 +1,4 @@
+,model_id,parameter,group_variable,Impact Parity,FDR Parity,FPR Parity,FOmR Parity,FNR Parity,TypeI Parity,TypeII Parity,Unsupervised Fairness,Supervised Fairness
+0,1,3317_abs,age_cat,False,True,False,False,False,False,False,False,False
+1,1,3317_abs,race,False,False,False,False,False,False,False,False,False
+2,1,3317_abs,sex,True,False,True,False,True,False,False,False,False
