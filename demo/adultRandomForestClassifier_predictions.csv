@@ -1,4 +1,4 @@
-,as_of_date,education,entity_id,gender,label_value,race,score,rank_abs,rank_pct
+as_of_date,education,entity_id,gender,label_value,race,score,rank_abs,rank_pct
 5794,5794,HS-grad,5794,Male,1,White,0.7,6576,0.3268502405568635
 26705,26705,Assoc-voc,26705,Female,0,White,0.9,5434,0.4437506397788924
 3474,3474,Bachelors,3474,Female,0,White,1.0,3465,0.6453065820452452
